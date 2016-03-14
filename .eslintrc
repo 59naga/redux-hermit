@@ -1,0 +1,14 @@
+---
+extends: airbnb
+parser: babel-eslint
+
+env:
+  node: true
+  mocha: true
+
+rules:
+  new-cap: [1, {"capIsNewExceptions": ["express.Router"]}]
+  arrow-body-style: [1]
+  react/jsx-no-bind: [1]
+  react/prefer-stateless-function: [1]
+  react/prop-types: [1]
