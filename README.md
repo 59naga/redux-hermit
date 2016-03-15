@@ -154,7 +154,6 @@ import { createStore, applyMiddleware } from 'redux';
 import hermit from 'redux-hermit';
 import axios from 'axios';
 
-const hermit = createMiddleware();
 const store = createStore(
   (state = {}, action) => {
     switch (action.type) {
