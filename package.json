@@ -3,7 +3,9 @@
   "version": "0.0.0",
   "description": "promise middleware with performing a server-side-rendering after the completion of the promises",
   "main": "lib",
-  "files": ["lib"],
+  "files": [
+    "lib"
+  ],
   "scripts": {
     "start": "abigail test PKG",
     "test": "mocha --compilers js:espower-babel/guess",
@@ -25,6 +27,7 @@
     "babel-preset-react": "^6.5.0",
     "babel-preset-stage-1": "^6.5.0",
     "caravan": "^0.0.2",
+    "codeclimate-test-reporter": "^0.3.1",
     "eslint": "^2.4.0",
     "eslint-config-airbnb": "^6.1.0",
     "eslint-plugin-react": "^4.2.1",
