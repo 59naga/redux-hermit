@@ -10,6 +10,10 @@ const createMock = (name) => (
     }
 
     componentWillMount() {
+      if (this.props.store.getState().SESSION_COMPLETE) {
+        return;
+      }
+
       this.props.store.dispatch(
         axios(`${process.env.URL}/${name}`)
         .then((response) => ({
@@ -28,12 +32,14 @@ const createMock = (name) => (
   }
 );
 
-/**
-* @module Container
-*/
+// private
 const Header = createMock('header');
 const Container = createMock('container');
 const Footer = createMock('footer');
+
+/**
+* @module Container
+*/
 export default (props) => (
   <div>
     <Header {...props} />

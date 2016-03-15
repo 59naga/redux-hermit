@@ -144,19 +144,22 @@ console.log(renderToStaticMarkup(<Document store={store} />));
 ```
 
 [inspired by this hack](https://github.com/facebook/react/issues/1739#issuecomment-187328724).
-if `createSession` of the `hermit`,
+if `session` of the `hermit`,
 capture the dispatch have been promise at __componentWillMount__.
 
 ```js
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createStore, applyMiddleware } from 'redux';
-import hermit, { createSession } from 'redux-hermit';
+import hermit from 'redux-hermit';
 import axios from 'axios';
 
+const hermit = createMiddleware();
 const store = createStore(
   (state = {}, action) => {
     switch (action.type) {
+      case 'SESSION_COMPLETE':
+        return Object.assign({}, state, { SESSION_COMPLETE: true });
       case 'header':
       case 'container':
       case 'footer':
@@ -175,6 +178,10 @@ const createMock = (name) => (
     }
 
     componentWillMount() {
+      if (this.props.store.getState().SESSION_COMPLETE) {
+        return;
+      }
+
       this.props.store.dispatch(
         axios('http://example.com/')
         .then(() => (
@@ -206,10 +213,11 @@ const Document = (props) => (
   </div>
 );
 
-createSession(() => {
+hermit.session(() => {
   renderToStaticMarkup(<Document store={store} />);
 })
 .then(() => {
+  store.dispatch({ type: 'SESSION_COMPLETE' });
   console.log(renderToStaticMarkup(<Document store={store} />));
   // <div><div>header</div><div>container</div><div>footer</div></div>
 });
@@ -220,7 +228,7 @@ you can server-side-rendering.
 ## Attention
 
 * that you must run the __twice__ render.
-* that also componentWillMount is performed __twice__(it is asked for your ideas).
+* that also componentWillMount is performed __twice__(to interrupted by using the `SESSION_COMPLETE` action).
 
 Development
 ---

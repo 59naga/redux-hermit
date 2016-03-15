@@ -1,6 +1,6 @@
 {
   "name": "redux-hermit",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "promise middleware with performing a server-side-rendering after the completion of the promises",
   "main": "lib",
   "files": [

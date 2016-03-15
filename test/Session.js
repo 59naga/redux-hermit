@@ -1,12 +1,12 @@
 // dependencies
-import createAppWithStore from './fixtures/createAppWithStore';
+import createApp from './fixtures/createApp';
 import caravan from 'caravan';
 import axios from 'axios';
 import immutable from 'immutable';
 import assert from 'power-assert';
 
 // target
-import hermit, { createSession } from '../src';
+import hermit from '../src';
 
 // environment
 const port = 59798;
@@ -15,7 +15,7 @@ process.env.URL = `http://localhost:${port}`;
 // specs
 describe('Session', () => {
   it('should create a separate session for concurrent requests', (done) => {
-    const server = createAppWithStore(hermit, createSession).listen(port, () => {
+    const server = createApp(hermit).listen(port, () => {
       const concurrency = 20;
       const urls = immutable.Range(0, concurrency).map(() => process.env.URL).toJS();
 
@@ -34,7 +34,7 @@ describe('Session', () => {
   });
 
   it('too long the session should reject automatically', (done) => {
-    const server = createAppWithStore(hermit, createSession, { timeout: 1 }).listen(port, () => {
+    const server = createApp(hermit, { timeout: 1 }).listen(port, () => {
       return axios(process.env.URL)
       .catch((response) => {
         assert(response.status === 500);

@@ -6,46 +6,6 @@ import Promise from 'bluebird';
 */
 export default class Session {
   /**
-  * @static
-  * @public
-  * @property current
-  */
-  static current = null;
-
-  /**
-  * if the session has been created just before dispatch
-  * the session(currentSession) will capture the action.
-  *
-  * @static
-  * @public
-  * @method waitFor
-  * @param {promise<object>|object} promise
-  * @param {function} resolved - fulfilled callback
-  * @param {function} [rejected] - rejected callback
-  * @returns {promise<undefined>} pendingPromise
-  */
-  static waitFor(promise, resolved, rejected) {
-    const currentSession = Session.current;
-    if (currentSession) {
-      currentSession.pending++;
-    }
-
-    return promise.then(
-      value => resolved(value),
-      rejected ? error => rejected(error) : undefined,
-    )
-    .then(() => {
-      if (currentSession) {
-        currentSession.finally++;
-
-        if (currentSession.pending === currentSession.finally) {
-          currentSession.complete();
-        }
-      }
-    });
-  }
-
-  /**
   * @constructor
   */
   constructor(options = {}) {
@@ -91,10 +51,10 @@ export default class Session {
   * to fulfill the this.promise
   *
   * @public
-  * @method complete
+  * @method success
   * @param {any} value
   */
-  complete(value) {
+  success(value) {
     if (this._resolve) {
       this._resolve(value);
       this._resolve = null;
