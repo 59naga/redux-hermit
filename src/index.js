@@ -1,5 +1,5 @@
 // self dependencies
-import Session from './session';
+import Session from './Session';
 
 /**
 * @module reduxHermit
