@@ -1,10 +1,19 @@
+// dependencies
 import express from 'express';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 
+// self dependencies
 import Container from './Container';
 
-export default (store, createSession) => {
+/**
+* @module createApp
+* @param {object} store
+* @param {function} createSession
+* @param {object} [sessionOptions]
+* @returns {object} app
+*/
+export default (store, createSession, sessionOptions) => {
   const app = express();
 
   app.get('/header', (req, res) => res.end('header'));
@@ -13,10 +22,14 @@ export default (store, createSession) => {
   app.get('/', (req, res) => {
     const container = <Container store={store} />;
 
-    renderToStaticMarkup(container);
-    createSession()
+    createSession(() => {
+      renderToStaticMarkup(container);
+    }, sessionOptions)
     .then(() => {
       res.status(200).send(renderToStaticMarkup(container));
+    })
+    .catch((error) => {
+      res.status(500).send(error.message);
     });
   });
 

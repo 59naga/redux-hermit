@@ -1,6 +1,8 @@
+// dependencies
 import React from 'react';
 import axios from 'axios';
 
+// utils
 const createMock = (name) => (
   class extends React.Component {
     static propTypes = {
@@ -26,15 +28,16 @@ const createMock = (name) => (
   }
 );
 
+/**
+* @module Container
+*/
 const Header = createMock('header');
 const Container = createMock('container');
 const Footer = createMock('footer');
-export default (props) => {
-  return (
-    <div>
-      <Header {...props} />
-      <Container {...props} />
-      <Footer {...props} />
-    </div>
-  );
-};
+export default (props) => (
+  <div>
+    <Header {...props} />
+    <Container {...props} />
+    <Footer {...props} />
+  </div>
+);

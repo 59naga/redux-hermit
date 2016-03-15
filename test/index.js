@@ -1,49 +1,71 @@
 // dependencies
-import createApp from './fixtures/app';
+import 'babel-polyfill';
 import { createStore, applyMiddleware } from 'redux';
-import axios from 'axios';
 import assert from 'power-assert';
 
 // target
-import hermit, { createSession } from '../src';
-
-// environment
-const port = 59798;
-process.env.URL = `http://localhost:${port}`;
-
-// utils
-const createAppWithStore = (middleware, waitForRequest) => {
-  const store = createStore(
-    (state = {}, action) => {
-      switch (action.type) {
-        case 'header':
-        case 'container':
-        case 'footer':
-          return Object.assign({}, state, action.payload);
-        default:
-          return state;
-      }
-    },
-    applyMiddleware(middleware),
-  );
-
-  return createApp(store, waitForRequest);
-};
+import reduxHermit from '../src';
 
 // specs
-describe('', () => {
-  let server;
-  before((done) => {
-    server = createAppWithStore(hermit, createSession).listen(port, done);
-  });
-  after((done) => {
-    server.close(done);
+describe('reduxHermit', () => {
+  let store;
+  before(() => {
+    store = createStore((state = {}, action) => {
+      return action;
+    }, applyMiddleware(reduxHermit));
   });
 
-  it('', () => (
-    axios(process.env.URL)
-    .then((response) => {
-      assert(response.data === '<div><div>header</div><div>container</div><div>footer</div></div>');
-    })
-  ));
+  it('handles Flux standard actions', async () => {
+    let state;
+    await store.dispatch({
+      type: 'foo',
+      payload: Promise.resolve('bar'),
+    });
+
+    state = store.getState();
+    assert(state.type === 'foo');
+    assert(state.payload === 'bar');
+
+    await store.dispatch({
+      type: 'foo',
+      payload: Promise.reject(new Error('bar')),
+    });
+
+    state = store.getState();
+    assert(state.type === 'foo');
+    assert(state.payload.message === 'bar');
+    assert(state.error);
+  });
+
+  it('handles promises', async () => {
+    await store.dispatch(Promise.resolve({
+      type: 'foo',
+      payload: 'bar',
+    }));
+
+    const state = store.getState();
+    assert(state.type === 'foo');
+    assert(state.payload === 'bar');
+
+    await store.dispatch(Promise.reject(new Error('bar')))
+    .catch((error) => {
+      assert(error.message === 'bar');
+    });
+  });
+
+  it('ignores non-promises', () => {
+    try {
+      store.dispatch('foo');
+    } catch (error) {
+      assert(error.message.match('Actions must be plain objects'));
+    }
+
+    store.dispatch({
+      type: 'foo',
+      payload: 'bar',
+    });
+    const state = store.getState();
+    assert(state.type === 'foo');
+    assert(state.payload === 'bar');
+  });
 });
