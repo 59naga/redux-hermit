@@ -4,6 +4,8 @@ import Promise from 'bluebird';
 /**
 * create the promiseWatchMiddleware
 *
+* @param {object} [middlewareOptions]
+* @param {number} [middlewareOptions.max=100]
 * @returns {function} promiseWatchMiddleware
 * @returns {function} promiseWatchMiddleware.wait
 */

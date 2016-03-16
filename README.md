@@ -27,7 +27,7 @@ Installation
 npm install redux-hermit --save
 ```
 
-`createPromiseWatchMiddleware({max:100})`
+Problem
 ---
 currently `ReactDOMServer.renderToString` [doesn't wait for the promise](https://github.com/facebook/react/issues/1739).
 the following code will fail.
@@ -110,9 +110,6 @@ babel-node index.jsx
 # mount props: { dispatch: [Function] }
 # <div>loading...</div>
 ```
-
-`promiseWatchMiddleware.wait({ timeout: 0 })` -> `Promise(values)`
----
 
 [inspired by this hack](https://github.com/facebook/react/issues/1739#issuecomment-187328724).
 
