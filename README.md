@@ -21,6 +21,12 @@ Redux Hermit
 
 a performing a server-side-rendering after the completion of the promises
 
+Installation
+---
+```bash
+npm install redux-hermit --save
+```
+
 `createPromiseWatchMiddleware({max:100})`
 ---
 currently `ReactDOMServer.renderToString` [doesn't wait for the promise](https://github.com/facebook/react/issues/1739).
