@@ -19,7 +19,7 @@ Redux Hermit
   </a>
 </p>
 
-a performing a server-side-rendering after the completion of the promises
+is watch the dispatched promise actions for server-side-rending.
 
 Installation
 ---
@@ -175,7 +175,6 @@ Development
 Requirement global
 * NodeJS v5.7.0
 * Npm v3.7.1
-* Babel-cli v6.5.1 (babel-core v6.5.2)
 
 ```bash
 git clone https://github.com/59naga/redux-hermit
