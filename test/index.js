@@ -1,71 +1,107 @@
 // dependencies
 import 'babel-polyfill';
 import { createStore, applyMiddleware } from 'redux';
+import promiseMiddleware from 'redux-promise';
 import assert from 'power-assert';
 
 // target
-import reduxHermit from '../src';
+import createPromiseWatchMiddleware from '../src';
 
 // specs
 describe('reduxHermit', () => {
-  let store;
-  before(() => {
-    store = createStore((state = {}, action) => {
+  it('no handles', () => {
+    const middleware = createPromiseWatchMiddleware();
+    const store = createStore((state = {}, action) => {
       return action;
-    }, applyMiddleware(reduxHermit));
-  });
+    }, applyMiddleware(middleware));
 
-  it('handles Flux standard actions', async () => {
-    let state;
-    await store.dispatch({
+    store.dispatch({
       type: 'foo',
-      payload: Promise.resolve('bar'),
     });
 
-    state = store.getState();
+    const state = store.getState();
     assert(state.type === 'foo');
-    assert(state.payload === 'bar');
-
-    await store.dispatch({
-      type: 'foo',
-      payload: Promise.reject(new Error('bar')),
-    });
-
-    state = store.getState();
-    assert(state.type === 'foo');
-    assert(state.payload.message === 'bar');
-    assert(state.error);
   });
 
-  it('handles promises', async () => {
-    await store.dispatch(Promise.resolve({
+  it('if action is promise, .wait() returns the promise values', async () => {
+    const middleware = createPromiseWatchMiddleware();
+    const store = createStore((state = {}, action) => {
+      return action;
+    }, applyMiddleware(middleware, promiseMiddleware));
+
+    store.dispatch(Promise.resolve({
       type: 'foo',
       payload: 'bar',
     }));
 
-    const state = store.getState();
-    assert(state.type === 'foo');
-    assert(state.payload === 'bar');
-
-    await store.dispatch(Promise.reject(new Error('bar')))
-    .catch((error) => {
-      assert(error.message === 'bar');
+    await middleware.wait().then((values) => {
+      assert(values[0].type === 'foo');
+      assert(values[0].payload === 'bar');
     });
   });
 
-  it('ignores non-promises', () => {
-    try {
-      store.dispatch('foo');
-    } catch (error) {
-      assert(error.message.match('Actions must be plain objects'));
-    }
+  it('if action.payload is promise, .wait() returns the **promise** values', async () => {
+    const middleware = createPromiseWatchMiddleware();
+    const store = createStore((state = {}, action) => {
+      return action;
+    }, applyMiddleware(middleware, promiseMiddleware));
 
     store.dispatch({
       type: 'foo',
-      payload: 'bar',
+      payload: Promise.resolve('bar'),
     });
-    const state = store.getState();
-    assert(state.type === 'foo');
-    assert(state.payload === 'bar');
+
+    await middleware.wait().then((values) => {
+      assert(values[0] === 'bar');
+    });
+  });
+
+  it('if promise of more than the specified options.max, throw a exception', async () => {
+    const middleware = createPromiseWatchMiddleware({ max: 1 });
+    const store = createStore((state = {}, action) => {
+      return action;
+    }, applyMiddleware(middleware, promiseMiddleware));
+
+    assert.throws(
+      () => {
+        store.dispatch({
+          type: 'foo',
+          payload: Promise.resolve('bar'),
+        });
+        store.dispatch({
+          type: 'foo',
+          payload: Promise.resolve('bar'),
+        });
+      },
+      (error) => {
+        assert(error.message === 'captured promises has exceeded the max(1)');
+        return true;
+      }
+    );
+  });
+
+  it('if .wait exceeded options.timeout, promise of .wait to reject', async () => {
+    const middleware = createPromiseWatchMiddleware();
+    const store = createStore((state = {}, action) => {
+      return action;
+    }, applyMiddleware(middleware, promiseMiddleware));
+
+    store.dispatch(new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          type: 'foo',
+          payload: 'bar',
+        });
+      }, 100);
+    }));
+
+    let error = {};
+    try {
+      await middleware.wait({ timeout: 1 });
+    } catch (e) {
+      error = e;
+    } finally {
+      assert(error.message === 'timeout of 1ms exceeded');
+    }
   });
 });

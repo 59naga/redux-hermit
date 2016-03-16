@@ -19,215 +19,153 @@ Redux Hermit
   </a>
 </p>
 
-is promise middleware with performing a server-side-rendering after the completion of the promises
+a performing a server-side-rendering after the completion of the promises
 
-Usage
+`createPromiseWatchMiddleware({max:100})`
 ---
-
-```bash
-npm install redux-hermit --save
-```
-
-if the `action` or `action.payload` is promise, `hermit` from waiting for the promise, and passes the result of promise to the next middleware(or dispatch).
-
-```js
-import { createStore, applyMiddleware } from 'redux';
-import hermit from 'redux-hermit';
-import axios from 'axios';
-
-const loggerMiddleware = () => (next) => (action) => {
-  console.log(action.payload.status);
-  return next(action);
-};
-const store = createStore(
-  (state = {}, action) => {
-    switch (action.type) {
-      case 'response':
-        return Object.assign({}, state, action.payload);
-      default:
-        return state;
-    }
-  },
-  applyMiddleware(hermit, loggerMiddleware),
-);
-
-async function dispatch() {
-  await store.dispatch(
-    axios('http://example.com/')
-    .then(response => ({
-      type: 'response',
-      payload: response,
-    }))
-  );
-
-  console.log(store.getState().statusText);
-
-  await store.dispatch({
-    type: 'response',
-    payload: axios('http://example.com/'),
-  });
-
-  console.log(store.getState().statusText);
-}
-dispatch();
-// 200
-// OK
-// 200
-// OK
-```
-
-Server Side Rendering
----
-
-## problem
-
 currently `ReactDOMServer.renderToString` [doesn't wait for the promise](https://github.com/facebook/react/issues/1739).
 the following code will fail.
 
 ```js
+// Foo.jsx
 import React from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
-import { createStore } from 'redux';
-import axios from 'axios';
+import { connect } from 'react-redux';
 
-const store = createStore(
-  (state = {}, action) => {
-    switch (action.type) {
-      case 'header':
-      case 'container':
-      case 'footer':
-        return Object.assign({}, state, action.payload);
-      default:
-        return state;
-    }
-  },
-);
-
-const createMock = (name) => (
+export default connect(
+  state => state,
+)(
   class extends React.Component {
-    static propTypes = {
-      store: React.PropTypes.object.isRequired,
-    }
-
     componentWillMount() {
-      axios('http://example.com/')
-      .then(() => {
-        this.props.store.dispatch({
-          type: name,
-          payload: {
-            [name]: `${name}`,
-          },
-        });
-      });
+      if (this.props.alreadyInitialized) {
+        return;
+      }
+      // any asynchronous processing...
+      console.log('mount props:', this.props);
+      this.props.dispatch(new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({
+            type: 'update',
+            payload: {
+              foo: 'complete',
+            },
+          });
+        }, Math.random() * 500);
+      }));
     }
     render() {
-      const value = this.props.store.getState()[name];
-
-      return <div>{value || 'empty'}</div>;
+      return (
+        <div>
+          {this.props.foo || 'loading...'}
+          {this.props.children}
+        </div>
+      );
     }
   }
 );
-
-const Header = createMock('header');
-const Container = createMock('container');
-const Footer = createMock('footer');
-const Document = (props) => (
-  <div>
-    <Header {...props} />
-    <Container {...props} />
-    <Footer {...props} />
-  </div>
-);
-
-console.log(renderToStaticMarkup(<Document store={store} />));
-// <div><div>empty</div><div>empty</div><div>empty</div></div>
 ```
 
+```js
+// index.jsx
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { createStore, applyMiddleware } from 'redux';
+import promiseMiddleware from 'redux-promise';
+import { Provider } from 'react-redux';
+import Foo from './Foo';
+
+const store = createStore(
+  (state = {}, action) => {
+    if (action.type === 'alreadyInitialized') {
+      return Object.assign({}, state, { alreadyInitialized: true });
+    }
+    if (action.type === 'update') {
+      return Object.assign({}, state, action.payload);
+    }
+    return state;
+  },
+  applyMiddleware(
+    promiseMiddleware,
+  ),
+);
+
+const provider = (
+  <Provider store={store}>
+    <Foo />
+  </Provider>
+);
+
+console.log('state:', store.getState())
+console.log(renderToStaticMarkup(provider));
+```
+
+```bash
+babel-node index.jsx
+# state: {}
+# mount props: { dispatch: [Function] }
+# <div>loading...</div>
+```
+
+`promiseWatchMiddleware.wait({ timeout: 0 })` -> `Promise(values)`
+---
+
 [inspired by this hack](https://github.com/facebook/react/issues/1739#issuecomment-187328724).
-if `session` of the `hermit`,
-capture the dispatch have been promise at __componentWillMount__.
+
+`promiseWatchMiddleware.wait` is wait the fulfill of captured promise actions at __componentWillMount__.
 
 ```js
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createStore, applyMiddleware } from 'redux';
-import hermit from 'redux-hermit';
-import axios from 'axios';
+import promiseMiddleware from 'redux-promise';
+import createPromiseWatchMiddleware from 'redux-hermit';
+import { Provider } from 'react-redux';
+import Foo from './Foo';
 
+const promiseWatchMiddleware = createPromiseWatchMiddleware();
 const store = createStore(
   (state = {}, action) => {
-    switch (action.type) {
-      case 'SESSION_COMPLETE':
-        return Object.assign({}, state, { SESSION_COMPLETE: true });
-      case 'header':
-      case 'container':
-      case 'footer':
-        return Object.assign({}, state, action.payload);
-      default:
-        return state;
+    if (action.type === 'alreadyInitialized') {
+      return Object.assign({}, state, { alreadyInitialized: true });
     }
+    if (action.type === 'update') {
+      return Object.assign({}, state, action.payload);
+    }
+    return state;
   },
-  applyMiddleware(hermit),
+  applyMiddleware(
+    promiseWatchMiddleware,
+    promiseMiddleware,
+  ),
 );
 
-const createMock = (name) => (
-  class extends React.Component {
-    static propTypes = {
-      store: React.PropTypes.object.isRequired,
-    }
-
-    componentWillMount() {
-      if (this.props.store.getState().SESSION_COMPLETE) {
-        return;
-      }
-
-      this.props.store.dispatch(
-        axios('http://example.com/')
-        .then(() => (
-          {
-            type: name,
-            payload: {
-              [name]: `${name}`,
-            },
-          }
-        ))
-      );
-    }
-    render() {
-      const value = this.props.store.getState()[name];
-
-      return <div>{value || 'empty'}</div>;
-    }
-  }
+const provider = (
+  <Provider store={store}>
+    <Foo />
+  </Provider>
 );
 
-const Header = createMock('header');
-const Container = createMock('container');
-const Footer = createMock('footer');
-const Document = (props) => (
-  <div>
-    <Header {...props} />
-    <Container {...props} />
-    <Footer {...props} />
-  </div>
-);
+renderToStaticMarkup(provider);
 
-hermit.session(() => {
-  renderToStaticMarkup(<Document store={store} />);
-})
-.then(() => {
-  store.dispatch({ type: 'SESSION_COMPLETE' });
-  console.log(renderToStaticMarkup(<Document store={store} />));
-  // <div><div>header</div><div>container</div><div>footer</div></div>
+promiseWatchMiddleware.wait().then(() => {
+  store.dispatch({ type: 'alreadyInitialized' });
+
+  console.log('state:', store.getState());
+  console.log(renderToStaticMarkup(provider));
 });
 ```
 
 you can server-side-rendering.
 
+```bash
+babel-node index.jsx
+# state: { foo: 'complete' }
+# <div>complete</div>
+```
+
 ## Attention
 
 * that you must run the __twice__ render.
-* that also componentWillMount is performed __twice__(to interrupted by using the `SESSION_COMPLETE` action).
+* that also `componentWillMount` is performed __twice__(can interrupted by using the `alreadyInitialized`).
 
 Development
 ---

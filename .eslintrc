@@ -7,6 +7,8 @@ env:
   mocha: true
 
 rules:
+  valid-jsdoc: [2,{"requireParamDescription":false}]
+  max-len: [1]
   new-cap: [1, {"capIsNewExceptions": ["express.Router","immutable.Range"]}]
   arrow-body-style: [1]
   react/jsx-no-bind: [1]
